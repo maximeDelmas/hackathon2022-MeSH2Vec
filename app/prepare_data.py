@@ -35,4 +35,7 @@ def create_ancestors_dict(path_to_ancestors, path_to_weights=None):
     return ancestors_dict
 
 
+
+
 a = create_ancestors_dict("data/mesh_ancestors.csv", "data/mesh_pmids_count.csv")
+
