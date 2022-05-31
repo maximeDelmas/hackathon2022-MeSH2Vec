@@ -54,7 +54,7 @@ class MeSH2VecDataset(Dataset):
 
     def mesh2label_dict(self, f_labels):
         labels = self.read(f_labels)
-        return dict(zip(labels[:,0].tolist(), labels[:,1].tolist()))
+        return dict(zip(labels[:, 0].tolist(), labels[:, 1].tolist()))
     
     def tensor2labels(self, t):
         return [self.labels.get(self.inverse_vocab.get(int(i), "NaN"), "No label Found") for i in t]
