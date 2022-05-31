@@ -23,6 +23,7 @@ class MeSH2VecDataset(Dataset):
         self.target = self.read(f_target).squeeze().tolist()
         self.vocab = self.read_vocab(f_vocab)
         self.inverse_vocab = {v: k for k, v in self.vocab.items()}
+        self.vocab_size = len(self.vocab)
         self.labels = self.mesh2label_dict(f_labels)
         self.n = len(self.input)
         self.w = len(self.input[0])
