@@ -18,13 +18,15 @@ where
     }
 ?pmid a fabio:Article .
 ?pmid (fabio:hasSubjectTerm|fabio:hasSubjectTerm/meshv:hasDescriptor) ?mesh .
+?mesh a meshv:TopicalDescriptor .
+?mesh meshv:active 1 .
 ?mesh meshv:treeNumber ?tn .
 FILTER(REGEX(?tn,"(C|A|G|F|I|J|D20|D23|D26|D27)")) .
 }
 
 
 
-# get MeSH ancestors
+# get MeSH ancestors (OBSOLETE)
 
 select distinct (strafter(STR(?mesh),"http://id.nlm.nih.gov/mesh/") as ?MESH) (strafter(STR(?ancestor),"http://id.nlm.nih.gov/mesh/") as ?MESH_ANCESTOR)
 where
@@ -38,14 +40,17 @@ where
 }
 
 OR 
+
 select distinct (strafter(STR(?mesh),"http://id.nlm.nih.gov/mesh/") as ?MESH) (strafter(STR(?ancestor),"http://id.nlm.nih.gov/mesh/") as ?MESH_ANCESTOR)
 where
 {
-    
+    ?mesh a meshv:TopicalDescriptor .
+    ?mesh meshv:active 1 .
     ?mesh (meshv:treeNumber|meshv:treeNumber/meshv:parentTreeNumber) ?tn .
     FILTER(REGEX(?tn,"(C|A|G|F|I|J|D20|D23|D26|D27)")) .
     ?ancestor meshv:treeNumber ?tn .
-
+    ?ancestor a meshv:TopicalDescriptor .
+    ?ancestor meshv:active 1 .
 }
 
 # get mesh
@@ -53,7 +58,8 @@ where
 select distinct (strafter(STR(?mesh),"http://id.nlm.nih.gov/mesh/") as ?MESH)
 where
 {
-    
+    ?mesh a meshv:TopicalDescriptor .
+    ?mesh meshv:active 1 .
     ?mesh meshv:treeNumber ?tn .
     FILTER(REGEX(?tn,"(C|A|G|F|I|J|D20|D23|D26|D27)")) .
 
