@@ -1,0 +1,126 @@
+---
+title: "Eval dataset"
+author: "Delmas Maxime"
+date: "31/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggplot2)
+```
+
+# P1 - Context
+
+```{r}
+weighted_contexte <- read.table("data/weighted-samping/context.csv", header = F, sep = ',')
+weighted_target <- read.table("data/weighted-samping/target.csv", header = F, sep = ',')
+
+uniform_contexte <- read.table("data/uniform-sampling/context.csv", header = F, sep = ',')
+uniform_target <- read.table("data/uniform-sampling/target.csv", header = F, sep = ',')
+
+vocab <- read.table("data/mesh_vocab.csv", header = F)
+colnames(vocab) <- "MESH"
+
+mesh_nb_childs <- read_csv("data/mesh_number_of_childs.csv")
+
+in_sampling_freq <- read_csv("data/sample_pmid_mesh.csv")
+
+```
+
+
+
+```{r}
+
+extract_contexte <- function(contexte){
+  
+  contexte_vector <- as.vector(t(contexte))
+  contexte_table <- table(contexte_vector) %>% data.frame()
+  colnames(contexte_table) <- c("MESH", "FREQ")
+  contexte_table <- contexte_table[order(contexte_table$FREQ, decreasing = T), ]
+  rownames(contexte_table) <- 1:nrow(contexte_table)
+  
+  return(contexte_table)
+  
+}
+
+
+```
+
+```{r}
+
+weighted_table_contexte <- extract_contexte(weighted_contexte)
+colnames(weighted_table_contexte)[2] <- "WEIGHTED_FREQ"
+
+uniform_table_contexte <-  extract_contexte(uniform_contexte)
+colnames(uniform_table_contexte)[2] <- "UNIFORM_FREQ"
+
+in_sampling_freq <- in_sampling_freq %>% group_by(MESH) %>% summarise(FREQ_IN_SAMPLING = n())
+
+table_count <- vocab %>% left_join(weighted_table_contexte, by = 'MESH') %>% left_join(uniform_table_contexte, by = 'MESH') %>% left_join(mesh_nb_childs, by = 'MESH') %>% left_join(in_sampling_freq, by = 'MESH')
+table_count[is.na(table_count)] <- 0
+
+ggplot(weighted_table_contexte, aes(x = reorder(MESH, -WEIGHTED_FREQ) , y = WEIGHTED_FREQ)) + 
+  geom_bar(stat = 'identity') +
+  theme_classic()
+
+ggplot(uniform_table_contexte, aes(x = reorder(MESH, -UNIFORM_FREQ) , y = UNIFORM_FREQ)) + 
+  geom_bar(stat = 'identity') +
+  theme_classic()
+
+```
+
+Correlation between frequency and mesh's number of childs with weights uniform or based on literature
+```{r}
+print("Weighted")
+plot(log(table_count[table_count$WEIGHTED_FREQ > 0, ]$NumberOfChilds), log(table_count[table_count$WEIGHTED_FREQ > 0, ]$WEIGHTED_FREQ))
+cor(table_count[table_count$WEIGHTED_FREQ > 0, ]$WEIGHTED_FREQ, table_count[table_count$WEIGHTED_FREQ > 0, ]$NumberOfChilds)
+
+print("Uniform")
+plot(log(table_count[table_count$UNIFORM_FREQ > 0, ]$NumberOfChilds), log(table_count[table_count$UNIFORM_FREQ > 0, ]$UNIFORM_FREQ))
+cor(table_count[table_count$UNIFORM_FREQ > 0, ]$UNIFORM_FREQ, table_count[table_count$UNIFORM_FREQ > 0, ]$NumberOfChilds)
+```
+
+Correlation between frequency and freq in samping with weights uniform or based on literature
+```{r}
+print("Weighted")
+cor(table_count[table_count$WEIGHTED_FREQ > 0, ]$WEIGHTED_FREQ, table_count[table_count$WEIGHTED_FREQ > 0, ]$FREQ_IN_SAMPLING)
+
+print("Uniform")
+cor(table_count[table_count$UNIFORM_FREQ > 0, ]$UNIFORM_FREQ, table_count[table_count$UNIFORM_FREQ > 0, ]$FREQ_IN_SAMPLING)
+```
+
+
+
+Tiles for Weighted
+```{r}
+weighted_ranked_table_count <- table_count[table_count$WEIGHTED_FREQ > 0, ] %>% select(MESH)
+weighted_ranked_table_count <- cbind(weighted_ranked_table_count, apply(-(table_count[table_count$WEIGHTED_FREQ > 0, ] %>% select(WEIGHTED_FREQ, NumberOfChilds, FREQ_IN_SAMPLING)), 2, FUN = function(x){rank(x, ties.method = "random")}))
+
+weighted_ranked_table_count$MESH <- factor(weighted_ranked_table_count$MESH, levels=weighted_ranked_table_count[order(weighted_ranked_table_count$WEIGHTED_FREQ, decreasing = F), ]$MESH)
+
+weighted_ranked_table_count <- pivot_longer(weighted_ranked_table_count, cols = c(WEIGHTED_FREQ, NumberOfChilds, FREQ_IN_SAMPLING))
+
+
+
+ggplot(weighted_ranked_table_count, aes(x = name, y = MESH, fill = value)) +
+  geom_tile()
+```
+
+
+Tiles for Weighted
+```{r}
+
+uniform_ranked_table_count <- table_count[table_count$UNIFORM_FREQ > 0, ] %>% select(MESH)
+uniform_ranked_table_count <- cbind(uniform_ranked_table_count, apply(-(table_count[table_count$UNIFORM_FREQ > 0, ] %>% select(UNIFORM_FREQ, NumberOfChilds, FREQ_IN_SAMPLING)), 2, FUN = function(x){rank(x, ties.method = "random")}))
+
+uniform_ranked_table_count$MESH <- factor(uniform_ranked_table_count$MESH, levels=uniform_ranked_table_count[order(uniform_ranked_table_count$UNIFORM_FREQ, decreasing = F), ]$MESH)
+
+uniform_ranked_table_count <- pivot_longer(uniform_ranked_table_count, cols = c(UNIFORM_FREQ, NumberOfChilds, FREQ_IN_SAMPLING))
+
+
+
+ggplot(uniform_ranked_table_count, aes(x = name, y = MESH, fill = value)) +
+  geom_tile()
+
+```
