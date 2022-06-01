@@ -16,3 +16,4 @@ dependencies:
   - nltk
   - gensim
   - flair
+  - ipykernel
