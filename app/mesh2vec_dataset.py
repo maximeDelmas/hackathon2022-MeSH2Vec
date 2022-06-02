@@ -18,7 +18,8 @@ class MeSH2VecDataset(Dataset):
     """
 
 
-    def __init__(self, f_input, f_target, f_vocab, f_labels):
+    def __init__(self, f_input, f_target, f_vocab, f_labels, checking=False):
+        self.vocab_checking = checking
         self.input = self.read(f_input).tolist()
         self.target = self.read(f_target).squeeze().tolist()
         self.vocab = self.read_vocab(f_vocab)
@@ -44,19 +45,20 @@ class MeSH2VecDataset(Dataset):
         v = self.read(f_vocab).squeeze().tolist()
 
         # Check that all input are in vocab:
-        flat_input = list(np.concatenate(self.input).flat)
-        if not all([j in v for j in flat_input]):
-            print("[WARNING] Some MeSH in input are not in the vocabulary")
-        
-        if not all([j in v for j in self.target]):
-            print("[WARNING] Some MeSH in target are not in the vocabulary")
-        
+        if self.vocab_checking:
+            flat_input = list(np.concatenate(self.input).flat)
+            if not all([j in v for j in flat_input]):
+                print("[WARNING] Some MeSH in input are not in the vocabulary")
+
+            if not all([j in v for j in self.target]):
+                print("[WARNING] Some MeSH in target are not in the vocabulary")
+
         return dict(zip(v, range(len(v))))
 
     def mesh2label_dict(self, f_labels):
         labels = self.read(f_labels)
         return dict(zip(labels[:, 0].tolist(), labels[:, 1].tolist()))
-    
+
     def tensor2labels(self, t):
         return [self.labels.get(self.inverse_vocab.get(int(i), "NaN"), "No label Found") for i in t]
 
