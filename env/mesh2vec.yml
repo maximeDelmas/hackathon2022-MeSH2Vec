@@ -5,7 +5,7 @@ dependencies:
 - pip:
   - numpy
   - pandas
-  - scipy  
+  - scipy
   - argparse
   - torch
   - requests
@@ -17,3 +17,4 @@ dependencies:
   - gensim
   - flair
   - ipykernel
+  - torchmetrics
