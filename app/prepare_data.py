@@ -7,7 +7,7 @@ import csv
 from io import StringIO
 
 
-def create_ancestors_dict(path_to_ancestors, path_to_weights=None):
+def create_ancestors_dict(path_to_ancestors, path_to_weights=None, power=1):
     """_summary_
 
     Args:
@@ -34,7 +34,7 @@ def create_ancestors_dict(path_to_ancestors, path_to_weights=None):
 
         # Add the MeSH itselft to the list of ancestors
         ancestors_dict[mesh]["ancestors"] = ancestors
-        inverse_weights = [1/(weights.get(ancestor, 0) + 1) for ancestor in ancestors]
+        inverse_weights = [1/(weights.get(ancestor, 0) + 1)**power for ancestor in ancestors]
         ancestors_dict[mesh]["proba"] = [w/sum(inverse_weights) for w in inverse_weights]
 
     return ancestors_dict
@@ -170,8 +170,16 @@ def create_samples(n, data, w, ancestors, f_input, f_target):
 # sampling_100000_pmids_mesh.to_csv("data/sampling_100000_pmids_mesh.csv", header=True, index=False)
 
 
-
-ancestors_dict = create_ancestors_dict("data/mesh_ancestors.csv", "data/mesh_pmids_count.csv")
+# WEIGHTED
+ancestors_dict = create_ancestors_dict("data/mesh_ancestors.csv", path_to_weights="data/mesh_pmids_count.csv")
 print(ancestors_dict["D010084"])
 
-create_samples(1000000, "data/sample_1000000/sampling_100000_pmids_mesh.csv", 6, ancestors_dict, "data/sample_1000000/context.csv", "data/sample_1000000/target.csv")
+create_samples(1000000, "data/sample_1000000/sampling_100000_pmids_mesh.csv", 6, ancestors_dict, "data/sample_1000000/weighted/context.csv", "data/sample_1000000/weighted/target.csv")
+
+
+
+# UNIFORM
+ancestors_dict_uniform = create_ancestors_dict("data/mesh_ancestors.csv")
+print(ancestors_dict_uniform["D010084"])
+
+create_samples(1000000, "data/sample_1000000/sampling_100000_pmids_mesh.csv", 6, ancestors_dict_uniform, "data/sample_1000000/uniform/context.csv", "data/sample_1000000/uniform/target.csv")

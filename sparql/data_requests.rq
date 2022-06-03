@@ -39,7 +39,7 @@ where
 
 }
 
-OR 
+OR VALID:
 
 select distinct (strafter(STR(?mesh),"http://id.nlm.nih.gov/mesh/") as ?MESH) (strafter(STR(?ancestor),"http://id.nlm.nih.gov/mesh/") as ?MESH_ANCESTOR)
 where
@@ -53,7 +53,7 @@ where
     ?ancestor meshv:active 1 .
 }
 
-# get mesh
+# get mesh (AKA VOCAB)
 
 select distinct (strafter(STR(?mesh),"http://id.nlm.nih.gov/mesh/") as ?MESH)
 where

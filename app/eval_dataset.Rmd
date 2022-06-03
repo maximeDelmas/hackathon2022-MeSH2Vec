@@ -13,18 +13,23 @@ library(ggplot2)
 # P1 - Context
 
 ```{r}
-weighted_contexte <- read.table("data/weighted-samping/context.csv", header = F, sep = ',')
-weighted_target <- read.table("data/weighted-samping/target.csv", header = F, sep = ',')
+weighted_contexte <- read.table("data/sample_1000000/weighted/context.csv", header = F, sep = ',')
+weighted_target <- read.table("data/sample_1000000/weighted/target.csv", header = F, sep = ',')
 
-uniform_contexte <- read.table("data/uniform-sampling/context.csv", header = F, sep = ',')
-uniform_target <- read.table("data/uniform-sampling/target.csv", header = F, sep = ',')
+uniform_contexte <- read.table("data/sample_1000000/uniform/context.csv", header = F, sep = ',')
+uniform_target <- read.table("data/sample_1000000/uniform/target.csv", header = F, sep = ',')
 
 vocab <- read.table("data/mesh_vocab.csv", header = F)
 colnames(vocab) <- "MESH"
 
 mesh_nb_childs <- read_csv("data/mesh_number_of_childs.csv")
 
-in_sampling_freq <- read_csv("data/sample_pmid_mesh.csv")
+in_sampling_freq <- read_csv("data/sample_1000000/sampling_100000_pmids_mesh.csv")
+
+global_frequency <- read_csv("data/mesh_pmids_count.csv")
+
+mesh_labels <- read_csv("data/mesh_labels.csv", col_names = c("MESH", "NAME"))
+
 
 ```
 
@@ -57,7 +62,7 @@ colnames(uniform_table_contexte)[2] <- "UNIFORM_FREQ"
 
 in_sampling_freq <- in_sampling_freq %>% group_by(MESH) %>% summarise(FREQ_IN_SAMPLING = n())
 
-table_count <- vocab %>% left_join(weighted_table_contexte, by = 'MESH') %>% left_join(uniform_table_contexte, by = 'MESH') %>% left_join(mesh_nb_childs, by = 'MESH') %>% left_join(in_sampling_freq, by = 'MESH')
+table_count <- vocab %>% left_join(weighted_table_contexte, by = 'MESH') %>% left_join(uniform_table_contexte, by = 'MESH') %>% left_join(mesh_nb_childs, by = 'MESH') %>% left_join(in_sampling_freq, by = 'MESH') %>% left_join(global_frequency, by = 'MESH')
 table_count[is.na(table_count)] <- 0
 
 ggplot(weighted_table_contexte, aes(x = reorder(MESH, -WEIGHTED_FREQ) , y = WEIGHTED_FREQ)) + 
@@ -81,6 +86,8 @@ plot(log(table_count[table_count$UNIFORM_FREQ > 0, ]$NumberOfChilds), log(table_
 cor(table_count[table_count$UNIFORM_FREQ > 0, ]$UNIFORM_FREQ, table_count[table_count$UNIFORM_FREQ > 0, ]$NumberOfChilds)
 ```
 
+
+
 Correlation between frequency and freq in samping with weights uniform or based on literature
 ```{r}
 print("Weighted")
@@ -92,19 +99,41 @@ cor(table_count[table_count$UNIFORM_FREQ > 0, ]$UNIFORM_FREQ, table_count[table_
 
 
 
+Correlation between frequency and global freq in FORUM with weights uniform or based on literature
+```{r}
+print("Weighted")
+cor(table_count[table_count$WEIGHTED_FREQ > 0, ]$WEIGHTED_FREQ, table_count[table_count$WEIGHTED_FREQ > 0, ]$TOTAL_PMID_MESH)
+
+print("Uniform")
+cor(table_count[table_count$UNIFORM_FREQ > 0, ]$UNIFORM_FREQ, table_count[table_count$UNIFORM_FREQ > 0, ]$TOTAL_PMID_MESH)
+```
+
+
 Tiles for Weighted
+Les données sont transformé en RANKING, c'est à dire que dans :
+WEIGHTED_FREQ: rang=1 repréente le MeSH le plus fréquement samplé par la méthode dans les exemples, et décroissant
+NumberOfChilds: rang=1 représente le MeSH avec le plus de d'enfants
+FREQ_IN_SAMPLING: rang=1 représente le MeSH le plus fréquent dans les articles qui ont été extraits
+TOTAL_PMID_MESH: rang=1 représente le MeSH avec le plus de littérature.
+
+L'objectif du sampling est que les MeSH les plus fréquent dans nos exemples (WEIGHTED_FREQ ou UNIFORM_FREQ) ne soient pas nécéssairement les MeSH les plus représenter dans la littérature de FORUM, c'est dire des MeSH très fréquement utilisés ou des MeSH de haute hiérarchie. Dans l'idéal on voudra quasiment quelque chose d'uniforme dans nos exemples en fait mais c'est pas vraiment possible ... car certains MeSH sont tout simplement trop peu annotés pour qu'on puisse en faire 100 exemples par exemple.
+
+En effet d'une part les MeSH très fréquents / de hautes hiérarchie ne sont pas les plus informatif, et, comme le montre le sampling UNIFORM si on utilise pas des poids pour réduire leur probabilité d'être piocher, alors il sont piocher énormément de fois... et compose une grande partie du dataset d'exemple, on détriment de MeSH plus intérressant
+
+
 ```{r}
 weighted_ranked_table_count <- table_count[table_count$WEIGHTED_FREQ > 0, ] %>% select(MESH)
-weighted_ranked_table_count <- cbind(weighted_ranked_table_count, apply(-(table_count[table_count$WEIGHTED_FREQ > 0, ] %>% select(WEIGHTED_FREQ, NumberOfChilds, FREQ_IN_SAMPLING)), 2, FUN = function(x){rank(x, ties.method = "random")}))
+weighted_ranked_table_count <- cbind(weighted_ranked_table_count, apply(-(table_count[table_count$WEIGHTED_FREQ > 0, ] %>% select(WEIGHTED_FREQ, NumberOfChilds, FREQ_IN_SAMPLING, TOTAL_PMID_MESH)), 2, FUN = function(x){rank(x, ties.method = "random")}))
 
 weighted_ranked_table_count$MESH <- factor(weighted_ranked_table_count$MESH, levels=weighted_ranked_table_count[order(weighted_ranked_table_count$WEIGHTED_FREQ, decreasing = F), ]$MESH)
 
-weighted_ranked_table_count <- pivot_longer(weighted_ranked_table_count, cols = c(WEIGHTED_FREQ, NumberOfChilds, FREQ_IN_SAMPLING))
+weighted_ranked_table_count <- pivot_longer(weighted_ranked_table_count, cols = c(WEIGHTED_FREQ, NumberOfChilds, FREQ_IN_SAMPLING, TOTAL_PMID_MESH))
 
 
 
 ggplot(weighted_ranked_table_count, aes(x = name, y = MESH, fill = value)) +
-  geom_tile()
+  geom_tile() + 
+  scale_fill_gradient(low = "red", high = "white")
 ```
 
 
@@ -112,15 +141,16 @@ Tiles for Weighted
 ```{r}
 
 uniform_ranked_table_count <- table_count[table_count$UNIFORM_FREQ > 0, ] %>% select(MESH)
-uniform_ranked_table_count <- cbind(uniform_ranked_table_count, apply(-(table_count[table_count$UNIFORM_FREQ > 0, ] %>% select(UNIFORM_FREQ, NumberOfChilds, FREQ_IN_SAMPLING)), 2, FUN = function(x){rank(x, ties.method = "random")}))
+uniform_ranked_table_count <- cbind(uniform_ranked_table_count, apply(-(table_count[table_count$UNIFORM_FREQ > 0, ] %>% select(UNIFORM_FREQ, NumberOfChilds, FREQ_IN_SAMPLING, TOTAL_PMID_MESH)), 2, FUN = function(x){rank(x, ties.method = "random")}))
 
 uniform_ranked_table_count$MESH <- factor(uniform_ranked_table_count$MESH, levels=uniform_ranked_table_count[order(uniform_ranked_table_count$UNIFORM_FREQ, decreasing = F), ]$MESH)
 
-uniform_ranked_table_count <- pivot_longer(uniform_ranked_table_count, cols = c(UNIFORM_FREQ, NumberOfChilds, FREQ_IN_SAMPLING))
+uniform_ranked_table_count <- pivot_longer(uniform_ranked_table_count, cols = c(UNIFORM_FREQ, NumberOfChilds, FREQ_IN_SAMPLING, TOTAL_PMID_MESH))
 
 
 
 ggplot(uniform_ranked_table_count, aes(x = name, y = MESH, fill = value)) +
-  geom_tile()
+  geom_tile() +
+  scale_fill_gradient(low = "red", high = "white")
 
 ```
